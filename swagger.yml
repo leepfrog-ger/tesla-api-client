@@ -342,7 +342,27 @@ paths:
       summary: Open Charge Port
       tags:
         - Vehicle Commands
-      operationId: ToggleChargePort
+      operationId: OpenChargePort
+      produces:
+        - application/json
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          type: string
+          description: The id of the Vehicle.
+      responses:
+        '200':
+          description: ''
+          schema:
+            $ref: '#/definitions/CommandResponse'
+  '/api/1/vehicles/{vehicle_id}/command/charge_port_door_close':
+    post:
+      description: Closes the charge port.
+      summary: Close Charge Port
+      tags:
+        - Vehicle Commands
+      operationId: CloseChargePort
       produces:
         - application/json
       parameters:
@@ -896,6 +916,33 @@ paths:
                 description: ''
                 schema:
                   $ref: '#/definitions/CommandResponse'
+  '/api/1/vehicles/{vehicle_id}/command/share':
+    post:
+      description: |-
+        Sends Data to Vehicle (v10 only)
+      summary: Share data to Vehicle
+      tags:
+        - Vehicle Commands
+      operationId: SharetoVehicle
+      produces:
+        - application/json
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          type: string
+          description: The id of the Vehicle.
+        - name: body
+          in: body
+          required: true
+          description: ''
+          schema:
+            $ref: '#/definitions/ShareRequest'
+      responses:
+        '200':
+          description: ''
+          schema:
+            $ref: '#/definitions/CommandResponse'
   '/api/1/vehicles/{vehicle_id}/command/media_toggle_playback':
             post:
               description: |-
@@ -1107,6 +1154,87 @@ paths:
         description: ''
         schema:
           $ref: '#/definitions/SentryModeRequest'
+      responses:
+        '200':
+          description: ''
+          schema:
+            $ref: '#/definitions/CommandResponse'
+  '/api/1/vehicles/{vehicle_id}/command/set_preconditioning_max':
+    post:
+      description: |-
+        Set Max Defrost
+      summary: Set Max Defrost
+      tags:
+        - Vehicle Commands
+      operationId: SetMaxDefrost
+      produces:
+        - application/json
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          type: string
+          description: The id of the Vehicle.
+        - name: body
+          in: body
+          required: true
+          description: ''
+          schema:
+            $ref: '#/definitions/MaxDefrostRequest'
+      responses:
+        '200':
+          description: ''
+          schema:
+            $ref: '#/definitions/CommandResponse'
+  '/api/1/vehicles/{vehicle_id}/command/window_control':
+    post:
+      description: |-
+        Window Control
+      summary: Window Control
+      tags:
+        - Vehicle Commands
+      operationId: WindowControl
+      produces:
+        - application/json
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          type: string
+          description: The id of the Vehicle.
+        - name: body
+          in: body
+          required: true
+          description: ''
+          schema:
+            $ref: '#/definitions/WindowControlRequest'
+      responses:
+        '200':
+          description: ''
+          schema:
+            $ref: '#/definitions/CommandResponse'
+  '/api/1/vehicles/{vehicle_id}/command/trigger_homelink':
+    post:
+      description: |-
+        Trigger Homelink
+      summary: Trigger Homelink
+      tags:
+        - Vehicle Commands
+      operationId: TriggerHomelink
+      produces:
+        - application/json
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          type: string
+          description: The id of the Vehicle.
+        - name: body
+          in: body
+          required: true
+          description: ''
+          schema:
+            $ref: '#/definitions/TriggerHomelinkRequest'
       responses:
         '200':
           description: ''
@@ -1338,6 +1466,40 @@ definitions:
         timestamp_ms:
           type: string
           description: Unix timestamp
+  ShareRequest:
+    title: Share request (v10 only)
+    type: object
+    properties:
+      type:
+        type: string
+        default: "share_ext_content_raw"
+        example: "share_ext_content_raw"
+        description: Change to "share_dest_content_coords" if using lat/long
+      value:
+        type: object
+        properties:
+          android.intent.extra.TEXT:
+            type: string
+            example: "45500 Fremont Blvd, Fremont, CA 94538\n\nhttps://goo.gl/maps/X"
+            description: Must match this syntax "DATA_TO_SEND_TO_NAV_SYSTEM\n\nhttps://goo.gl/maps/X"
+          lat:
+            type: number
+            format: double
+            example: 123.456
+            description: "Latitude of destination to send. Only send with 'long'"
+          long:
+            type: number
+            format: double
+            example: -123.456
+            description: "Longitude of destination to send. Only send with 'lat'"
+      locale:
+        type: string
+        example: "en-US"
+        description: "Locale this request should be treated as"
+      timestamp:
+        type: number
+        example: 1574041714569
+        description: "UNIX timestamp indicating when this request was sent"
   SentryModeRequest:
     title: Sentry Mode
     example:
@@ -1346,6 +1508,46 @@ definitions:
     properties:
       'on':
         type: boolean
+  MaxDefrostRequest:
+    title: Max Defrost
+    example:
+        'on': true
+    type: object
+    properties:
+      'on':
+        type: boolean
+  WindowControlRequest:
+    title: Window Control
+    example:
+      lat: 123.456
+      lng: -123.456
+      command: vent
+    type: object
+    properties:
+      lat:
+        type: number
+        format: double
+      long:
+        type: number
+        format: double
+      command:
+        enum:
+          - vent
+          - close
+        type: string
+  TriggerHomelinkRequest:
+    title: Trigger Homelink
+    example:
+      lat: 123.456
+      lng: -123.456
+    type: object
+    properties:
+      lat:
+        type: number
+        format: double
+      long:
+        type: number
+        format: double
   GetVehiclesResponse:
     title: List all Vehicles response
     example:
@@ -1583,6 +1785,8 @@ definitions:
           type: boolean
         is_auto_conditioning_on:
           type: boolean
+        defrost_mode:
+          type: integer
         timestamp:
           type: number
   DriveStateResponse:
@@ -1714,9 +1918,14 @@ definitions:
         type: object
         properties:
           expected_duration_sec:
-            type: number
+            type: integer
           status:
             type: string
+          download_perc:
+            type: integer
+          install_perc:
+            type: integer
+          version: string
       sun_roof_percent_open:
         type: integer
       sun_roof_state:
@@ -1743,6 +1952,20 @@ definitions:
             format: double
           pin_code_set:
             type: boolean
+      fd_window:
+        type: integer
+      fp_window:
+        type: integer
+      homelink_device_count:
+        type: integer
+      rd_window:
+        type: integer
+      rp_window:
+        type: integer
+      smart_summon_available:
+        type: Boolean
+      summon_standby_mode_enabled:
+        type: Boolean
   VehicleConfigResponse:
     title: Vehicle Config response
     type: object
